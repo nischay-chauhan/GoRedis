@@ -2,19 +2,16 @@ package handlers
 
 import (
 	"encoding/json"
+	"go-redis/internal/models"
 	"log"
 	"net/http"
+
 	"github.com/redis/go-redis/v9"
 )
 
 const (
 	scoreSet = "scores"
 )
-
-type ScoreRequest struct {
-	Player string `json:"player"`
-	Score  int    `json:"score"`
-}
 
 type ScoreHandler struct {
 	redisClient *redis.Client
@@ -34,7 +31,7 @@ func (h *ScoreHandler) SubmitScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req ScoreRequest
+	var req models.ScoreRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
