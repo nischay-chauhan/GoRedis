@@ -7,6 +7,7 @@ import (
 
 	"go-redis/internal/config"
 	"go-redis/internal/routes"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -17,7 +18,7 @@ func main() {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisAddr,
-		Password: "", 
+		Password: "",
 		DB:       0,
 	})
 
@@ -33,7 +34,6 @@ func main() {
 	log.Printf("Available endpoints:")
 	log.Printf("  POST http://localhost:%s/score - Submit a score (requires JSON body: {\"player\": \"name\", \"score\": 100})", cfg.Port)
 	log.Printf("  GET  http://localhost:%s/health - Health check\n", cfg.Port)
-
 
 	if err := http.ListenAndServe(serverAddr, router); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
