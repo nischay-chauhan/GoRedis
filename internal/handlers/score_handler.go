@@ -5,6 +5,7 @@ import (
 	"go-redis/internal/models"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -45,6 +46,36 @@ func (h *ScoreHandler) SubmitScore(w http.ResponseWriter, r *http.Request) {
 	if req.Score <= 0 {
 		http.Error(w, "Score must be a positive number", http.StatusBadRequest)
 		return
+	}
+
+	idemKey := r.Header.Get("Idempotency-Key")
+	const idemTTL = 2 * time.Minute
+	if idemKey != "" {
+		ctx := r.Context()
+		key := "idem:score:" + idemKey
+		created, err := h.redisClient.SetNX(ctx, key, "1", idemTTL).Result()
+		if err != nil {
+			log.Printf("Failed to set idempotency key in Redis: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		if !created {
+			score, err := h.redisClient.ZScore(ctx, scoreSet, req.Player).Result()
+			if err != nil && err != redis.Nil {
+				log.Printf("Failed to get score during idempotent replay: %v", err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":            "success",
+				"message":           "Idempotent replay; score unchanged",
+				"player":            req.Player,
+				"score":             score,
+				"idempotent_replay": true,
+			})
+			return
+		}
 	}
 
 	ctx := r.Context()
